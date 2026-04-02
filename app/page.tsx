@@ -96,29 +96,51 @@ export default function HomePage() {
         <div className="container mx-auto px-4 text-center">
           <div 
             ref={heroAnim.ref}
-            className={cn(
-              "transition-all duration-700 ease-out",
-              heroAnim.isVisible 
-                ? "opacity-100 translate-y-0" 
-                : "opacity-0 translate-y-8"
-            )}
+            className="space-y-6"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm mb-6">
+            {/* Badge */}
+            <div className={cn(
+              "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm",
+              heroAnim.isVisible && "animate-fade-up-blur"
+            )}>
               <Sparkles className="h-4 w-4" />
               <span>No downloads required - works in your browser</span>
             </div>
-            
-            <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 text-balance">
-              Technical Interviews,{" "}
-              <span className="text-primary">Reimagined</span>
+
+            {/* Headline – each word slides in with a stagger */}
+            <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-balance overflow-hidden">
+              {["Technical", "Interviews,", "Reimagined"].map((word, i) => (
+                <span
+                  key={word}
+                  className={cn(
+                    "inline-block mr-4",
+                    heroAnim.isVisible
+                      ? i === 2
+                        ? "text-primary animate-slide-up"
+                        : "animate-slide-up"
+                      : "opacity-0 translate-y-8"
+                  )}
+                  style={{ animationDelay: `${i * 120}ms` }}
+                >
+                  {word}
+                </span>
+              ))}
             </h2>
-            
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-12 text-pretty">
+
+            {/* Subtitle */}
+            <p className={cn(
+              "text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto text-pretty",
+              heroAnim.isVisible && "animate-fade-up-blur delay-300"
+            )}>
               Combine the power of Zoom video calls with a VS Code-like coding environment. 
               Everything you need for technical interviews in one browser tab.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            {/* CTA Buttons */}
+            <div className={cn(
+              "flex flex-col sm:flex-row gap-4 justify-center mb-16",
+              heroAnim.isVisible && "animate-slide-up delay-500"
+            )}>
               <Button asChild size="lg" className="gap-2">
                 <Link href="/auth/sign-up">
                   Start Free

@@ -1,21 +1,11 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
 import { 
   Code2, 
   Plus, 
@@ -27,8 +17,6 @@ import {
   Check,
   Loader2,
   Trash2,
-  Settings,
-  Image as ImageIcon
 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
@@ -43,8 +31,6 @@ interface Meeting {
 interface Profile {
   id: string
   display_name: string | null
-  bio?: string | null
-  avatar_url?: string | null
 }
 
 interface DashboardClientProps {
@@ -68,72 +54,16 @@ function generateMeetingCode(): string {
 
 export function DashboardClient({ user, profile, meetings: initialMeetings, errorMessage }: DashboardClientProps) {
   const [meetings, setMeetings] = useState<Meeting[]>(initialMeetings)
-  const [activeProfile, setActiveProfile] = useState<Profile | null>(profile)
   const [error, setError] = useState<string | null>(errorMessage || null)
   const [joinCode, setJoinCode] = useState("")
   const [creating, setCreating] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [joinError, setJoinError] = useState<string | null>(null)
-  
-  // Account Settings State
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [editName, setEditName] = useState(activeProfile?.display_name || "")
-  const [editBio, setEditBio] = useState(activeProfile?.bio || "")
-  const [editAvatarUrl, setEditAvatarUrl] = useState(activeProfile?.avatar_url || "")
-  const [savingProfile, setSavingProfile] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const router = useRouter()
   const supabase = createClient()
 
-  const displayName = activeProfile?.display_name || user.email?.split("@")[0] || "User"
-
-  const handleSaveProfile = async () => {
-    setSavingProfile(true)
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        display_name: editName,
-        bio: editBio,
-        avatar_url: editAvatarUrl
-      })
-      .eq("id", user.id)
-
-    // Even if Supabase fails (e.g. missing columns), mock it locally for the prototype UI
-    setActiveProfile(prev => ({
-      ...prev,
-      id: user.id,
-      display_name: editName,
-      bio: editBio,
-      avatar_url: editAvatarUrl
-    }))
-    setIsSettingsOpen(false)
-    router.refresh()
-
-    if (error) {
-      console.error(error)
-      setError("Note: Supabase update failed (did you add 'bio' and 'avatar_url' columns to your profiles table?). Your changes are mocked locally.")
-    }
-    setSavingProfile(false)
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Convert file to base64 Data URL for easy storage in generic text column
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      if (event.target?.result && typeof event.target.result === 'string') {
-        setEditAvatarUrl(event.target.result)
-      }
-    }
-    reader.readAsDataURL(file)
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
-  }
+  const displayName = profile?.display_name || user.email?.split("@")[0] || "User"
 
   const handleCreateMeeting = async () => {
     setCreating(true)
@@ -210,114 +140,29 @@ export function DashboardClient({ user, profile, meetings: initialMeetings, erro
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
+      <header className="border-b border-border bg-card animate-slide-up">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 animate-slide-left delay-100">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Code2 className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold text-foreground">CodeLink</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end">
-              <span className="text-sm text-muted-foreground hidden sm:inline-block">
-                Welcome, <span className="text-foreground font-medium">{displayName}</span>
-              </span>
-              {activeProfile?.bio && (
-                <span className="text-xs text-muted-foreground max-w-[200px] truncate hidden sm:inline-block">
-                  {activeProfile.bio}
-                </span>
-              )}
-            </div>
-            {activeProfile?.avatar_url ? (
-               <img src={activeProfile.avatar_url} alt="Profile" className="w-8 h-8 rounded-full border border-border object-cover" />
-            ) : (
-               <div className="w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold relative group">
-                 {displayName.charAt(0).toUpperCase()}
-               </div>
-            )}
-            <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
-              <Settings className="w-5 h-5" />
+          <div className="flex items-center gap-4 animate-slide-right delay-100">
+            <span className="text-sm text-muted-foreground hidden sm:inline-block">
+              Welcome, <span className="text-foreground font-medium">{displayName}</span>
+            </span>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Account Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Account Settings</DialogTitle>
-            <DialogDescription>
-              Update your public profile details.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Profile Picture URL</Label>
-              <div className="flex gap-2">
-                 <Input 
-                   placeholder="https://example.com/avatar.jpg" 
-                   value={editAvatarUrl.length > 100 ? "Uploaded Image Data" : editAvatarUrl}
-                   onChange={(e) => setEditAvatarUrl(e.target.value)}
-                 />
-                 <input 
-                   type="file" 
-                   ref={fileInputRef} 
-                   onChange={handleImageUpload} 
-                   accept="image/*" 
-                   className="hidden" 
-                 />
-                 <Button 
-                   variant="outline" 
-                   size="icon" 
-                   className="shrink-0" 
-                   onClick={() => fileInputRef.current?.click()}
-                   title="Upload an Image"
-                 >
-                   <ImageIcon className="h-4 w-4" />
-                 </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Nickname</Label>
-              <Input 
-                placeholder="What should we call you?" 
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Bio</Label>
-              <Textarea 
-                placeholder="A little bit about yourself..." 
-                value={editBio}
-                onChange={(e) => setEditBio(e.target.value)}
-                className="resize-none"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter className="flex items-center sm:justify-between w-full">
-            <Button variant="destructive" size="sm" onClick={handleSignOut} className="mr-auto">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out
-            </Button>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveProfile} disabled={savingProfile}>
-                {savingProfile ? "Saving..." : "Save Profile"}
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <main className="max-w-6xl mx-auto px-4 py-8">
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-between">
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-between animate-slide-up">
             <span>{error}</span>
             <Button variant="ghost" size="sm" onClick={() => setError(null)} className="text-destructive hover:text-destructive">
               Dismiss
@@ -325,7 +170,7 @@ export function DashboardClient({ user, profile, meetings: initialMeetings, erro
           </div>
         )}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Card className="border-border bg-card">
+          <Card className="border-border bg-card animate-slide-left delay-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-card-foreground">
                 <Plus className="w-5 h-5" />
@@ -357,7 +202,7 @@ export function DashboardClient({ user, profile, meetings: initialMeetings, erro
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card">
+          <Card className="border-border bg-card animate-slide-right delay-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-card-foreground">
                 <Users className="w-5 h-5" />
@@ -389,7 +234,7 @@ export function DashboardClient({ user, profile, meetings: initialMeetings, erro
           </Card>
         </div>
 
-        <Card className="border-border bg-card">
+        <Card className="border-border bg-card animate-slide-up delay-400">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-card-foreground">
               <Clock className="w-5 h-5" />
